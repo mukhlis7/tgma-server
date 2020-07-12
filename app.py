@@ -6,6 +6,8 @@ import time
 import datetime
 from functools import wraps
 import jwt
+import string
+import random
 
 app_passwd = 'mysecretMg7Mukhlis7HelloFromThisWorld!'
 
@@ -44,6 +46,21 @@ def token_required(f):
 
 	return decorated
 
+
+def username_generator(size=6, chars=string.ascii_uppercase + string.digits):
+	return ''.join(random.choice(chars) for _ in range(size))
+
+def password_generator(size=18, chars=string.ascii_uppercase + string.digits):
+	return ''.join(random.choice(chars) for _ in range(size))
+
+
+
+def close_db(error):
+	if hasattr(g,'postgres_db_conn'):
+		g.postgres_db_conn.close()
+
+	if hasattr(g,'postgres_db_cur'):
+		g.postgres_db_cur.close()
 
 
 @app.route('/')
@@ -111,8 +128,65 @@ def login():
 		return jsonify({'loggedin':loggedin, 'message':error})
 
 
+@app.route('/register', methods=['GET', 'POST'])
+def register_user():
+	db = get_db()
+
+	fullname = request.args.get('fullname')
+	username = username_generator()
+	password = password_generator()
+
+	print("Fullname : " + fullname)
+	print("Username : " + username)
+	print("Password : " + password)
+
+	db.execute('select id from tgmauser where username = %s', (username, ))
+	existing_user_username = db.fetchone()
+
+	if existing_user_username:
+		print('Failed to Register! Username already Exist')
+		return('Failed to Register! Username already Exist')
+
+	db.execute('insert into tgmauser (fullname, username, password, verified) values (%s, %s, %s, %s)', (fullname, username, password, '1'))
+	print("Registered!")
+	return("Registered!")
 
 
+@app.route('/delete', methods=['GET', 'POST'])
+def delete_user():
+	db = get_db()
+
+	username = request.args.get('username')
+
+	print("Username : " + username)
+
+	db.execute('select id from tgmauser where username = %s', (username, ))
+	existing_user_username = db.fetchone()
+
+	if existing_user_username:
+		print('Deleting! Username Exists')
+		#return('Failed to Register! Username already Exist')
+
+		db.execute('delete from tgmauser where username = %s', (username, ))
+		#db.execute('insert into tgmauser (fullname, username, password, verified) values (%s, %s, %s, %s)', (fullname, username, password, '1'))
+		print(username + " Deleted!")
+		return(username + " Deleted!")
+	else:
+		return("Username Not Found!")
+
+@app.route('/allusers', methods=['GET', 'POST'])
+def fetch_all_users():
+
+	db = get_db()
+	db.execute('select * from tgmauser', )
+	all_users = db.fetchall()
+	length = len(all_users)
+	for i in range(length):
+		print("\n" + str(all_users[i]) + "\n")
+
+	#print(all_users)
+
+	return jsonify({'result':all_users})
 
 if __name__ == '__main__':
 
