@@ -5,4 +5,4 @@ Pyrebase==3.0.27
 regex==2019.08.19
 gunicorn==19.9.0
 psycopg2==2.8.4
-PyJWT==1.7.1
+PyJWT==2.4.0
